@@ -59,10 +59,15 @@ export default function About() {
               <p className="font-mono text-xs uppercase tracking-widest text-accent">
                 Currently
               </p>
-              <p className="mt-2 text-ink">
+              <p className="mt-2 text-ink leading-relaxed">
                 SDE 2 @ <span className="text-grad font-semibold">Tessell</span> — building an
-                AI-powered MCP blog publishing pipeline that turns GitHub commits into
-                SEO-optimised posts on Sanity & Hashnode in a single prompt.
+                AI-powered blog publishing pipeline as an MCP server that reads GitHub commit
+                history, writes SEO-optimised posts in the company's brand voice, and
+                auto-publishes to Sanity CMS and Hashnode — reducing manual blog production
+                from days to minutes.
+              </p>
+              <p className="mt-3 font-mono text-[11px] text-ink-dim">
+                Tech stack: React.js · TypeScript
               </p>
             </div>
           </div>

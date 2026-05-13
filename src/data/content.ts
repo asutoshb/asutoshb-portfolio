@@ -35,7 +35,7 @@ export const experience: Experience[] = [
     period: "Apr 2025 — Present",
     location: "Bangalore, India",
     bullets: [
-      "Built an AI-powered blog publishing pipeline as an MCP server that reads GitHub commit history, writes SEO-optimised posts in the company's brand voice, and auto-publishes to Sanity CMS and Hashnode — triggered by a single prompt, reducing manual blog production effort from days to minutes.",
+      "Built an AI-powered blog publishing pipeline as an MCP server that reads GitHub commit history, writes SEO-optimised posts in the company's brand voice, and auto-publishes to Sanity CMS and Hashnode — reducing manual blog production from days to minutes. Tech stack: React.js, TypeScript.",
       "Shipped the Alert Policy (ECIF) feature for Tessell's Observability platform, enabling enterprise customers to configure metric-based alerts with multi-channel delivery, improving system reliability and customer satisfaction.",
       "Hardened frontend authentication by replacing localStorage with in-memory accessToken + HttpOnly refreshToken, mitigating XSS/CSRF risks and unblocking PCI compliance and enterprise DBaaS onboarding.",
       "Implemented Subresource Integrity (SRI) for third-party scripts and styles, preventing tampered CDN resources from loading and aligning with PCI compliance requirements.",

@@ -31,7 +31,7 @@ export default function ProjectCard({ p }: { p: Project }) {
       ref={ref}
       onMouseMove={onMove}
       onMouseLeave={onLeave}
-      className="group relative h-full rounded-2xl border border-white/10 bg-bg-card/70 p-6 backdrop-blur-md transition-transform duration-200 will-change-transform"
+      className="group relative flex h-full flex-col rounded-2xl border border-white/10 bg-bg-card/70 p-6 backdrop-blur-md transition-transform duration-200 will-change-transform"
       style={{
         backgroundImage:
           "radial-gradient(circle at var(--mx,50%) var(--my,50%), rgba(167,139,250,0.10), transparent 40%)",
@@ -61,7 +61,7 @@ export default function ProjectCard({ p }: { p: Project }) {
         ))}
       </div>
 
-      <div className="mt-6 flex items-center gap-3 text-ink-muted">
+      <div className="mt-auto pt-6 flex items-center gap-3 text-ink-muted">
         {p.github && (
           <a
             href={p.github}
