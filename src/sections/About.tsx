@@ -55,21 +55,6 @@ export default function About() {
               ))}
             </div>
 
-            <div className="reveal card mt-4 border-accent/20">
-              <p className="font-mono text-xs uppercase tracking-widest text-accent">
-                Currently
-              </p>
-              <p className="mt-2 text-ink leading-relaxed">
-                SDE 2 @ <span className="text-grad font-semibold">Tessell</span> — building an
-                AI-powered blog publishing pipeline as an MCP server that reads GitHub commit
-                history, writes SEO-optimised posts in the company's brand voice, and
-                auto-publishes to Sanity CMS and Hashnode — reducing manual blog production
-                from days to minutes.
-              </p>
-              <p className="mt-3 font-mono text-[11px] text-ink-dim">
-                Tech stack: React.js · TypeScript
-              </p>
-            </div>
           </div>
         </div>
       </div>
