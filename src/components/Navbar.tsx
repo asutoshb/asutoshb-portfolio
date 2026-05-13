@@ -6,6 +6,7 @@ const links = [
   { href: "#experience", label: "Experience" },
   { href: "#projects", label: "Projects" },
   { href: "#skills", label: "Skills" },
+  { href: "/Asutosh_Behera_Resume.pdf", label: "Resume", external: true },
   { href: "#contact", label: "Contact" },
 ];
 
@@ -45,6 +46,7 @@ export default function Navbar() {
             <li key={l.href}>
               <a
                 href={l.href}
+                {...(l.external ? { target: "_blank", rel: "noreferrer" } : {})}
                 className="rounded-full px-4 py-2 text-sm text-ink-muted transition hover:text-ink hover:bg-white/[0.05]"
               >
                 {l.label}
@@ -85,6 +87,7 @@ export default function Navbar() {
                 <a
                   onClick={() => setOpen(false)}
                   href={l.href}
+                  {...(l.external ? { target: "_blank", rel: "noreferrer" } : {})}
                   className="block rounded-lg px-4 py-3 text-sm text-ink-muted hover:bg-white/[0.05] hover:text-ink"
                 >
                   {l.label}

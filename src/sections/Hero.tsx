@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { FaGithub, FaLinkedinIn } from "react-icons/fa";
-import { ArrowDown, Sparkles } from "lucide-react";
+import { ArrowDown, Download, Sparkles } from "lucide-react";
 import HeroScene from "../components/three/HeroScene";
 import { profile } from "../data/content";
 
@@ -79,6 +79,16 @@ export default function Hero() {
             <a href="#contact" className="btn-ghost">
               Get in touch
             </a>
+            <a
+              href="/Asutosh_Behera_Resume.pdf"
+              target="_blank"
+              rel="noreferrer"
+              download
+              className="btn-ghost"
+            >
+              <Download size={16} />
+              Resume
+            </a>
           </div>
 
           <div className="reveal mt-8 flex items-center gap-4 text-ink-muted">
@@ -108,13 +118,6 @@ export default function Hero() {
         <div className="relative h-[380px] w-full md:col-span-5 md:h-[520px]">
           <div className="absolute inset-0">
             <HeroScene />
-          </div>
-          {/* floating tags */}
-          <div className="pointer-events-none absolute left-2 top-6 hidden md:block">
-            <span className="pill bg-bg/60">React · TypeScript</span>
-          </div>
-          <div className="pointer-events-none absolute bottom-6 right-2 hidden md:block">
-            <span className="pill bg-bg/60">Three.js · GSAP</span>
           </div>
         </div>
       </div>
