@@ -11,7 +11,7 @@ export default function Contact() {
 
       <div className="container-x">
         <div className="reveal text-center">
-          <span className="pill mx-auto">05 — Contact</span>
+          <span className="pill mx-auto">06 — Contact</span>
           <h2 className="heading-lg mt-4">
             Let's build something <span className="text-grad">remarkable.</span>
           </h2>

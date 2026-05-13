@@ -7,7 +7,7 @@ export default function Projects() {
       <div className="container-x">
         <div className="reveal flex flex-wrap items-end justify-between gap-4">
           <div>
-            <span className="pill">03 — Projects</span>
+            <span className="pill">04 — Projects</span>
             <h2 className="heading-lg mt-4">
               Things I've <span className="text-grad">designed & built.</span>
             </h2>

@@ -137,17 +137,61 @@ export const skills = {
   Concepts: ["REST APIs", "WebSockets", "System Design", "Auth & MFA", "AI Integration"],
 };
 
-export const education = [
+export type Education = {
+  school: string;
+  course: string;
+  period: string;
+  notes?: string[];
+};
+
+export const education: Education[] = [
   {
     school: "Masai School",
     course: "Full Stack Web Development",
     period: "Apr 2021 — Dec 2021",
-    notes: ["1300+ hours hands-on coding", "300+ DSA problems solved", "100+ hours soft skills training"],
+    notes: [
+      "1300+ hours of hands-on coding experience",
+      "Solved 300+ Data Structures & Algorithms problems",
+      "100+ hours of soft-skills training",
+    ],
   },
   {
     school: "NIT Meghalaya",
-    course: "B.Tech, Electronics & Communication",
+    course: "B.Tech, Electronics & Communication Engineering",
     period: "2016 — 2020",
     notes: ["CGPA 8.94 — First Class with Distinction"],
+  },
+  {
+    school: "Kendriya Vidyalaya, Bhubaneswar",
+    course: "12th — CBSE",
+    period: "2015 — 2016",
+    notes: ["90% aggregate"],
+  },
+  {
+    school: "Kendriya Vidyalaya, Bhubaneswar",
+    course: "10th — CBSE",
+    period: "2013 — 2014",
+    notes: ["CGPA 10"],
+  },
+];
+
+export type Achievement = {
+  title: string;
+  detail: string;
+  icon: "trophy" | "cricket" | "award";
+};
+
+export const achievements: Achievement[] = [
+  {
+    title: "Annual College Tech Fest — Hackathon Winner",
+    detail:
+      "Won a ₹22,000 cash prize as a 4-member team at NIT Meghalaya's annual technical fest, building working bots that competed against other teams.",
+    icon: "trophy",
+  },
+  {
+    title: "Intra-Collegiate Cricket Tournament — 1st Place",
+    detail:
+      "Won first place in the Intra-Collegiate Cricket Tournament representing my batch.",
+    icon: "cricket",
   },
 ];

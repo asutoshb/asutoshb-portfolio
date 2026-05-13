@@ -64,7 +64,7 @@ export default function Skills() {
     <section id="skills" className="section-pad relative">
       <div className="container-x">
         <div className="reveal">
-          <span className="pill">04 — Skills</span>
+          <span className="pill">05 — Skills</span>
           <h2 className="heading-lg mt-4">
             My <span className="text-grad">tech stack</span> & toolkit.
           </h2>

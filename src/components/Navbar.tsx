@@ -4,6 +4,7 @@ import { profile } from "../data/content";
 const links = [
   { href: "#about", label: "About" },
   { href: "#experience", label: "Experience" },
+  { href: "#education", label: "Education" },
   { href: "#projects", label: "Projects" },
   { href: "#skills", label: "Skills" },
   { href: "/Asutosh_Behera_Resume.pdf", label: "Resume", external: true },
