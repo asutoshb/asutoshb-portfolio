@@ -31,7 +31,7 @@ export default function Experience() {
                       left ? "" : "md:[&>*:first-child]:col-start-2"
                     }`}
                   >
-                    <div className={`pl-10 md:pl-0 ${left ? "md:text-right md:pr-10" : "md:pl-10"}`}>
+                    <div className={`pl-10 md:pl-0 ${left ? "md:pr-10" : "md:pl-10"}`}>
                       <div className="card">
                         <div className="mb-3 flex items-center gap-2 text-xs uppercase tracking-widest text-ink-dim">
                           <Briefcase size={12} className="text-accent" />

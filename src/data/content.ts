@@ -101,7 +101,6 @@ export const projects: Project[] = [
       "A blogging platform where users read and write blogs from creators around the world.",
     tech: ["React", "MongoDB", "Node.js", "CSS"],
     github: "https://github.com/shivam-singh-au17/ProjectMediumClone",
-    live: "https://mediumapp.vercel.app/",
     blog: "https://asutoshblog.hashnode.dev/medium-clone",
   },
   {
