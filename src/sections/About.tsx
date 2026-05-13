@@ -61,7 +61,8 @@ export default function About() {
               </p>
               <p className="mt-2 text-ink">
                 SDE 2 @ <span className="text-grad font-semibold">Tessell</span> — building an
-                AI-powered NL → SQL platform & hardening auth with org-wide MFA.
+                AI-powered MCP blog publishing pipeline that turns GitHub commits into
+                SEO-optimised posts on Sanity & Hashnode in a single prompt.
               </p>
             </div>
           </div>

@@ -59,8 +59,8 @@ export default function Cursor() {
 
     let raf = 0;
     const tick = () => {
-      rx += (mx - rx) * 0.18;
-      ry += (my - ry) * 0.18;
+      rx += (mx - rx) * 0.1;
+      ry += (my - ry) * 0.1;
       ring.style.transform = `translate3d(${rx}px, ${ry}px, 0) translate(-50%, -50%)`;
       raf = requestAnimationFrame(tick);
     };
