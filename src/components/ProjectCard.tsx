@@ -42,11 +42,6 @@ export default function ProjectCard({ p }: { p: Project }) {
           Featured
         </span>
       )}
-      {p.badge && (
-        <span className="absolute left-4 top-4 inline-flex items-center gap-1 rounded-full border border-accent-cyan/40 bg-accent-cyan/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-accent-cyan">
-          {p.badge}
-        </span>
-      )}
 
       <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] font-display text-lg text-grad">
         {p.title.charAt(0)}
@@ -54,6 +49,13 @@ export default function ProjectCard({ p }: { p: Project }) {
 
       <h3 className="heading-md text-lg md:text-xl">{p.title}</h3>
       <p className="mt-2 text-sm text-ink-muted">{p.description}</p>
+
+      {p.badge && (
+        <div className="mt-4 inline-flex w-fit items-center gap-1.5 rounded-full border border-accent-cyan/40 bg-accent-cyan/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-accent-cyan">
+          <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-accent-cyan" />
+          {p.badge}
+        </div>
+      )}
 
       <div className="mt-4 flex flex-wrap gap-1.5">
         {p.tech.map((t) => (
@@ -78,7 +80,7 @@ export default function ProjectCard({ p }: { p: Project }) {
             <FaGithub size={15} />
           </a>
         )}
-        {p.npm && (
+        {p.npm && p.live && (
           <a
             href={p.npm}
             target="_blank"
