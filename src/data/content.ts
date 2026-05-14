@@ -75,10 +75,22 @@ export type Project = {
   github?: string;
   live?: string;
   blog?: string;
+  npm?: string;
+  badge?: string;
   highlight?: boolean;
 };
 
 export const projects: Project[] = [
+  {
+    title: "mcp-pr-description",
+    description:
+      "An MCP server I built and published to npm that auto-generates rich, conventional PR descriptions from your local git diff — drop it into Claude / Cursor / any MCP client and ship better PRs in seconds.",
+    tech: ["TypeScript", "MCP", "Node.js", "OpenAI", "npm"],
+    github: "https://github.com/asutoshb/mcp-pr-description",
+    npm: "https://www.npmjs.com/package/mcp-pr-description",
+    badge: "1000+ downloads in 6 days",
+    highlight: true,
+  },
   {
     title: "Welth — AI Finance Platform",
     description:

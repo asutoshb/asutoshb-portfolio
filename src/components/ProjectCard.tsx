@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { FaGithub } from "react-icons/fa";
-import { SiHashnode } from "react-icons/si";
+import { SiHashnode, SiNpm } from "react-icons/si";
 import type { Project } from "../data/content";
 
 export default function ProjectCard({ p }: { p: Project }) {
@@ -42,6 +42,11 @@ export default function ProjectCard({ p }: { p: Project }) {
           Featured
         </span>
       )}
+      {p.badge && (
+        <span className="absolute left-4 top-4 inline-flex items-center gap-1 rounded-full border border-accent-cyan/40 bg-accent-cyan/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-accent-cyan">
+          {p.badge}
+        </span>
+      )}
 
       <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] font-display text-lg text-grad">
         {p.title.charAt(0)}
@@ -73,6 +78,17 @@ export default function ProjectCard({ p }: { p: Project }) {
             <FaGithub size={15} />
           </a>
         )}
+        {p.npm && (
+          <a
+            href={p.npm}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`${p.title} on npm`}
+            className="grid h-9 w-9 place-items-center rounded-full border border-white/10 transition hover:bg-white/[0.05] hover:text-[#cb3837]"
+          >
+            <SiNpm size={15} />
+          </a>
+        )}
         {p.blog && (
           <a
             href={p.blog}
@@ -84,14 +100,14 @@ export default function ProjectCard({ p }: { p: Project }) {
             <SiHashnode size={15} />
           </a>
         )}
-        {p.live && (
+        {(p.live || p.npm) && (
           <a
-            href={p.live}
+            href={p.live ?? p.npm!}
             target="_blank"
             rel="noreferrer"
             className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-accent hover:text-accent-cyan"
           >
-            Live <ArrowUpRight size={14} />
+            {p.live ? "Live" : "View on npm"} <ArrowUpRight size={14} />
           </a>
         )}
       </div>
