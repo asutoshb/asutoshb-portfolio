@@ -1,4 +1,4 @@
-import { FaGithub, FaLinkedinIn, FaTwitter } from "react-icons/fa";
+import { FaGithub, FaInstagram, FaLinkedinIn, FaTwitter } from "react-icons/fa";
 import { SiHashnode } from "react-icons/si";
 import { profile } from "../data/content";
 
@@ -19,6 +19,9 @@ export default function Footer() {
           </a>
           <a aria-label="Twitter" href={profile.socials.twitter} target="_blank" rel="noreferrer" className="hover:text-accent">
             <FaTwitter size={18} />
+          </a>
+          <a aria-label="Instagram" href={profile.socials.instagram} target="_blank" rel="noreferrer" className="hover:text-accent">
+            <FaInstagram size={18} />
           </a>
           <a aria-label="Hashnode" href={profile.socials.hashnode} target="_blank" rel="noreferrer" className="hover:text-accent">
             <SiHashnode size={18} />

@@ -10,6 +10,7 @@ export const profile = {
     linkedin: "https://www.linkedin.com/in/asutosh-behera-491908190/",
     twitter: "https://twitter.com/asutoshbehera5",
     hashnode: "https://asutoshblog.hashnode.dev",
+    instagram: "https://www.instagram.com/asu_tosh10/",
   },
   about: [
     "I'm a passionate full-stack engineer focused on building products that scale and feel effortless to use.",
