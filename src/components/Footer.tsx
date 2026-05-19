@@ -1,4 +1,4 @@
-import { FaGithub, FaInstagram, FaLinkedinIn, FaTwitter } from "react-icons/fa";
+import { FaInstagram, FaLinkedinIn, FaTwitter } from "react-icons/fa";
 import { SiHashnode } from "react-icons/si";
 import { profile } from "../data/content";
 
@@ -11,9 +11,6 @@ export default function Footer() {
           © {year} {profile.name}. Crafted with React, R3F & GSAP.
         </p>
         <div className="flex items-center gap-3 text-ink-muted">
-          <a aria-label="GitHub" href={profile.socials.github} target="_blank" rel="noreferrer" className="hover:text-accent">
-            <FaGithub size={18} />
-          </a>
           <a aria-label="LinkedIn" href={profile.socials.linkedin} target="_blank" rel="noreferrer" className="hover:text-accent">
             <FaLinkedinIn size={18} />
           </a>
