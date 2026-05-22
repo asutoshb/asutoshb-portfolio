@@ -4,7 +4,7 @@ export const profile = {
   role: "Software Engineer",
   tagline: "I build scalable web platforms, AI-powered tools and delightful user experiences.",
   location: "Bhubaneswar, Odisha — India",
-  email: "asutoshbehera5@gmail.com",
+  email: "beheraasutosh132@gmail.com",
   socials: {
     github: "https://github.com/asutoshb",
     linkedin: "https://www.linkedin.com/in/asutosh-behera-491908190/",
