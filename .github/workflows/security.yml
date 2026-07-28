@@ -1,0 +1,75 @@
+name: Security Scan
+
+# Runs on every push and pull request so secrets / vulnerable patterns
+# are caught before they ever reach the main branch.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+  workflow_dispatch: {}
+
+# Cancel older runs on the same branch to keep the demo output clean.
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write   # allows uploading SARIF to the Security tab
+  pull-requests: read
+
+jobs:
+  # ------------------------------------------------------------------
+  # 1. Gitleaks - scans git history + working tree for hard-coded secrets
+  #    (API keys, tokens, passwords, private keys, etc.)
+  # ------------------------------------------------------------------
+  gitleaks:
+    name: Gitleaks (secret scanning)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history so gitleaks can scan every commit
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # GITLEAKS_LICENSE is only needed for GitHub Organizations.
+          # For a personal repo you can leave this out.
+          # GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+  # ------------------------------------------------------------------
+  # 2. Semgrep - static analysis for insecure code patterns
+  #    (SQLi, XSS, command injection, weak crypto, dangerouslySetInnerHTML, etc.)
+  # ------------------------------------------------------------------
+  semgrep:
+    name: Semgrep (SAST)
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep
+        run: semgrep ci --sarif --output=semgrep.sarif || true
+        env:
+          # Curated rule packs. Free to use without a token.
+          # p/default = balanced set, p/react + p/typescript = frontend rules,
+          # p/secrets = extra secret detection to complement gitleaks.
+          SEMGREP_RULES: >-
+            p/default
+            p/react
+            p/typescript
+            p/javascript
+            p/secrets
+            p/owasp-top-ten
+
+      - name: Upload Semgrep results to Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: semgrep.sarif
