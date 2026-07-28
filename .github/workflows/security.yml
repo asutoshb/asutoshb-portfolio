@@ -33,13 +33,52 @@ jobs:
         with:
           fetch-depth: 0   # full history so gitleaks can scan every commit
 
-      - name: Run Gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # GITLEAKS_LICENSE is only needed for GitHub Organizations.
-          # For a personal repo you can leave this out.
-          # GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+      # The gitleaks-action scans only the commits in the current push
+      # (incremental), so a secret added in an EARLIER commit is missed on
+      # later pushes. We run the binary against the full history instead so
+      # any secret present anywhere reliably turns the job red.
+      - name: Install Gitleaks
+        run: |
+          VERSION=8.18.4
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" \
+            | tar -xz gitleaks
+          sudo mv gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+
+      # continue-on-error so the summarize step always runs; it re-exits 1
+      # when secrets are found, keeping the job red.
+      - name: Scan whole repo (full history)
+        id: gitleaks
+        continue-on-error: true
+        run: |
+          # --redact ensures NO secret values are ever written to logs/artifacts.
+          gitleaks detect \
+            --source . \
+            --report-format json \
+            --report-path gitleaks.json \
+            --redact \
+            --no-banner
+
+      - name: Summarize findings
+        if: always()
+        run: |
+          if [ ! -f gitleaks.json ]; then
+            echo "### ⚠️ Gitleaks — scanner crashed (no report produced)" >> "$GITHUB_STEP_SUMMARY"
+            echo "Check the 'Scan whole repo' step logs for details." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          if [ -s gitleaks.json ] && [ "$(jq 'length' gitleaks.json)" != "0" ]; then
+            echo "## 🛑 Gitleaks detected secrets 🛑" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "| File | Rule | Line |" >> "$GITHUB_STEP_SUMMARY"
+            echo "|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
+            jq -r '.[] | "| \(.File) | \(.RuleID) | \(.StartLine) |"' gitleaks.json >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "> Values are redacted. Rotate any real secret immediately and remove it from git history." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          else
+            echo "## ✅ Gitleaks — no secrets detected" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
   # ------------------------------------------------------------------
   # 2. Semgrep - static analysis for insecure code patterns
