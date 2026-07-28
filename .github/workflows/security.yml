@@ -70,6 +70,53 @@ jobs:
             --sarif --output=semgrep.sarif \
             --error
 
+      # Build a run-page summary table from the SARIF, mirroring the
+      # table the Gitleaks action prints. Runs even when the scan step
+      # fails (findings present) thanks to `if: always()`.
+      - name: Semgrep summary
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json, os
+
+          summary = os.environ["GITHUB_STEP_SUMMARY"]
+
+          def write(text):
+              with open(summary, "a") as f:
+                  f.write(text)
+
+          # If the report is missing/corrupt the scanner crashed - surface it
+          # loudly instead of silently reporting "no issues" (a false all-clear).
+          if not os.path.exists("semgrep.sarif"):
+              write("## ⚠️ Semgrep - scanner crashed (no report produced)\n\n")
+              write("Check the 'Run Semgrep' step logs for details.\n")
+              raise SystemExit(0)
+          try:
+              data = json.load(open("semgrep.sarif"))
+          except Exception as e:
+              write(f"## ⚠️ Semgrep - could not parse report ({e})\n")
+              raise SystemExit(0)
+
+          rows = []
+          for run in data.get("runs", []):
+              for r in run.get("results", []):
+                  rule = r.get("ruleId", "")
+                  level = r.get("level", "warning")
+                  msg = (r.get("message", {}).get("text", "") or "").splitlines()[0]
+                  loc = (r.get("locations") or [{}])[0].get("physicalLocation", {})
+                  uri = loc.get("artifactLocation", {}).get("uri", "")
+                  line = loc.get("region", {}).get("startLine", "")
+                  rows.append((rule, level, uri, line, msg))
+          if rows:
+              write("## 🛑 Semgrep detected issues 🛑\n\n")
+              write("| Rule ID | Severity | File | Line | Message |\n")
+              write("|---|---|---|---|---|\n")
+              for rule, level, uri, line, msg in rows:
+                  write(f"| `{rule}` | {level} | {uri} | {line} | {msg} |\n")
+          else:
+              write("## ✅ Semgrep found no issues\n")
+          PY
+
       - name: Upload Semgrep results to Security tab
         uses: github/codeql-action/upload-sarif@v3
         if: always()
