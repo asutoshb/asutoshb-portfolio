@@ -54,19 +54,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Use `semgrep scan` (full working-tree scan) instead of `semgrep ci`.
+      # `semgrep ci` is diff-aware and needs a Semgrep platform token, so
+      # without one it scans nothing. `--error` makes the job FAIL (red X)
+      # when any finding is detected - which is what we want to showcase.
       - name: Run Semgrep
-        run: semgrep ci --sarif --output=semgrep.sarif || true
-        env:
-          # Curated rule packs. Free to use without a token.
-          # p/default = balanced set, p/react + p/typescript = frontend rules,
-          # p/secrets = extra secret detection to complement gitleaks.
-          SEMGREP_RULES: >-
-            p/default
-            p/react
-            p/typescript
-            p/javascript
-            p/secrets
-            p/owasp-top-ten
+        run: |
+          semgrep scan \
+            --config p/default \
+            --config p/javascript \
+            --config p/typescript \
+            --config p/react \
+            --config p/secrets \
+            --config p/owasp-top-ten \
+            --sarif --output=semgrep.sarif \
+            --error
 
       - name: Upload Semgrep results to Security tab
         uses: github/codeql-action/upload-sarif@v3
