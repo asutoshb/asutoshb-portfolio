@@ -78,7 +78,16 @@ jobs:
             echo "" >> "$GITHUB_STEP_SUMMARY"
             echo "| File | Rule | Line |" >> "$GITHUB_STEP_SUMMARY"
             echo "|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
-            jq -r '.[] | "| \(.File) | \(.RuleID) | \(.StartLine) |"' gitleaks.json >> "$GITHUB_STEP_SUMMARY"
+            # Dedupe: git-log mode reports one hit per secret PER COMMIT, so the
+            # same secret repeats across the PR's commits. Collapse by File+Rule
+            # (values are redacted, so the secret itself can't be the key) and
+            # keep the smallest line number seen for a stable, single row each.
+            jq -r '
+              group_by(.File + "|" + .RuleID)
+              | map({File: .[0].File, RuleID: .[0].RuleID, Line: (map(.StartLine) | min)})
+              | .[]
+              | "| \(.File) | \(.RuleID) | \(.Line) |"
+            ' gitleaks.json >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
             echo "> Values are redacted. Rotate any real secret immediately and remove it from git history." >> "$GITHUB_STEP_SUMMARY"
             exit 1
