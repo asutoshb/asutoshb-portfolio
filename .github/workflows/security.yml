@@ -16,8 +16,6 @@ concurrency:
 
 permissions:
   contents: read
-  security-events: write   # allows uploading SARIF to the Security tab
-  pull-requests: read
 
 jobs:
   # ------------------------------------------------------------------
@@ -102,18 +100,27 @@ jobs:
   semgrep:
     name: Semgrep (SAST)
     runs-on: ubuntu-latest
-    container:
-      image: semgrep/semgrep
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0   # need history so --baseline-commit can diff the PR
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Semgrep
+        run: pip install --quiet semgrep
+
       # `semgrep scan` with --baseline-commit reports ONLY findings introduced
       # by this PR (compared against the PR base). No platform token needed.
-      # --error makes the job FAIL (red X) when a new finding is detected.
+      # continue-on-error so the summarize step always runs; it re-exits 1
+      # when findings are present, keeping the job red.
       - name: Run Semgrep (PR changes only)
+        id: semgrep
+        continue-on-error: true
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
@@ -125,58 +132,27 @@ jobs:
             --config p/secrets \
             --config p/owasp-top-ten \
             --baseline-commit "${BASE_SHA}" \
-            --sarif --output=semgrep.sarif \
-            --error
+            --json --output=semgrep.json \
+            --quiet
 
-      # Build a run-page summary table from the SARIF, mirroring the
-      # table the Gitleaks action prints. Runs even when the scan step
-      # fails (findings present) thanks to `if: always()`.
-      - name: Semgrep summary
+      # Build a run-page summary table from the JSON, mirroring the Gitleaks
+      # table. Runs even when the scan step fails thanks to `if: always()`.
+      - name: Summarize findings
         if: always()
         run: |
-          python3 - <<'PY'
-          import json, os
-
-          summary = os.environ["GITHUB_STEP_SUMMARY"]
-
-          def write(text):
-              with open(summary, "a") as f:
-                  f.write(text)
-
-          # If the report is missing/corrupt the scanner crashed - surface it
-          # loudly instead of silently reporting "no issues" (a false all-clear).
-          if not os.path.exists("semgrep.sarif"):
-              write("## ⚠️ Semgrep - scanner crashed (no report produced)\n\n")
-              write("Check the 'Run Semgrep' step logs for details.\n")
-              raise SystemExit(0)
-          try:
-              data = json.load(open("semgrep.sarif"))
-          except Exception as e:
-              write(f"## ⚠️ Semgrep - could not parse report ({e})\n")
-              raise SystemExit(0)
-
-          rows = []
-          for run in data.get("runs", []):
-              for r in run.get("results", []):
-                  rule = r.get("ruleId", "")
-                  level = r.get("level", "warning")
-                  msg = (r.get("message", {}).get("text", "") or "").splitlines()[0]
-                  loc = (r.get("locations") or [{}])[0].get("physicalLocation", {})
-                  uri = loc.get("artifactLocation", {}).get("uri", "")
-                  line = loc.get("region", {}).get("startLine", "")
-                  rows.append((rule, level, uri, line, msg))
-          if rows:
-              write("## 🛑 Semgrep detected issues 🛑\n\n")
-              write("| Rule ID | Severity | File | Line | Message |\n")
-              write("|---|---|---|---|---|\n")
-              for rule, level, uri, line, msg in rows:
-                  write(f"| `{rule}` | {level} | {uri} | {line} | {msg} |\n")
-          else:
-              write("## ✅ Semgrep found no issues\n")
-          PY
-
-      - name: Upload Semgrep results to Security tab
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: semgrep.sarif
+          if [ ! -f semgrep.json ]; then
+            echo "## ⚠️ Semgrep — scanner crashed (no report produced)" >> "$GITHUB_STEP_SUMMARY"
+            echo "Check the 'Run Semgrep' step logs for details." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          COUNT=$(jq '.results | length' semgrep.json)
+          if [ "$COUNT" != "0" ]; then
+            echo "## 🛑 Semgrep detected issues 🛑" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "| File | Line | Severity | Rule | Message |" >> "$GITHUB_STEP_SUMMARY"
+            echo "|---|---|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
+            jq -r '.results[] | "| \(.path) | \(.start.line) | \(.extra.severity) | \(.check_id | split(".") | last) | \(.extra.message | gsub("[\\r\\n|]"; " ")) |"' semgrep.json >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          else
+            echo "## ✅ Semgrep — no issues detected" >> "$GITHUB_STEP_SUMMARY"
+          fi
