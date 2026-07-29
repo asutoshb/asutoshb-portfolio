@@ -6,9 +6,12 @@ on:
   pull_request:
     branches: ["**"]
 
-# Cancel older runs on the same branch to keep the demo output clean.
+# One lane per PR: a new commit to the same PR cancels the previous
+# still-running scan. Keyed by PR number so it stays stable across every
+# `synchronize` event (github.ref for pull_request is refs/pull/N/merge,
+# which is already stable, but PR number is the clearest key).
 concurrency:
-  group: security-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
