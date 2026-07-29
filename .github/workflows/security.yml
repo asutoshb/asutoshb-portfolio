@@ -1,13 +1,10 @@
 name: Security Scan
 
-# Runs on every push and pull request so secrets / vulnerable patterns
-# are caught before they ever reach the main branch.
+# Diff-aware: runs on pull requests and reports ONLY what the PR changed.
+# A base branch is required to diff against, so this workflow is PR-only.
 on:
-  push:
-    branches: ["**"]
   pull_request:
     branches: ["**"]
-  workflow_dispatch: {}
 
 # Cancel older runs on the same branch to keep the demo output clean.
 concurrency:
@@ -21,8 +18,8 @@ permissions:
 
 jobs:
   # ------------------------------------------------------------------
-  # 1. Gitleaks - scans git history + working tree for hard-coded secrets
-  #    (API keys, tokens, passwords, private keys, etc.)
+  # 1. Gitleaks - scans the commits introduced by THIS PR for hard-coded
+  #    secrets (API keys, tokens, passwords, private keys, etc.)
   # ------------------------------------------------------------------
   gitleaks:
     name: Gitleaks (secret scanning)
@@ -33,10 +30,8 @@ jobs:
         with:
           fetch-depth: 0   # full history so gitleaks can scan every commit
 
-      # The gitleaks-action scans only the commits in the current push
-      # (incremental), so a secret added in an EARLIER commit is missed on
-      # later pushes. We run the binary against the full history instead so
-      # any secret present anywhere reliably turns the job red.
+      # Run the gitleaks binary so we can scope the scan to the PR's commit
+      # range (base..HEAD) instead of the whole repo.
       - name: Install Gitleaks
         run: |
           VERSION=8.18.4
@@ -47,13 +42,21 @@ jobs:
 
       # continue-on-error so the summarize step always runs; it re-exits 1
       # when secrets are found, keeping the job red.
-      - name: Scan whole repo (full history)
+      - name: Scan PR changes only
         id: gitleaks
         continue-on-error: true
+        env:
+          # PR base commit, passed via env (never interpolated into the shell
+          # body) to avoid injection. It is an ancestor of HEAD thanks to
+          # fetch-depth: 0, so no extra fetch is needed.
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          # --redact ensures NO secret values are ever written to logs/artifacts.
+          # --redact keeps secret VALUES out of logs/artifacts.
+          # --log-opts limits the scan to commits introduced by THIS PR
+          # (base..HEAD), so only secrets the PR adds are reported.
           gitleaks detect \
             --source . \
+            --log-opts="${BASE_SHA}..HEAD" \
             --report-format json \
             --report-path gitleaks.json \
             --redact \
@@ -64,7 +67,7 @@ jobs:
         run: |
           if [ ! -f gitleaks.json ]; then
             echo "### ⚠️ Gitleaks — scanner crashed (no report produced)" >> "$GITHUB_STEP_SUMMARY"
-            echo "Check the 'Scan whole repo' step logs for details." >> "$GITHUB_STEP_SUMMARY"
+            echo "Check the 'Scan PR changes only' step logs for details." >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
           if [ -s gitleaks.json ] && [ "$(jq 'length' gitleaks.json)" != "0" ]; then
@@ -92,12 +95,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # need history so --baseline-commit can diff the PR
 
-      # Use `semgrep scan` (full working-tree scan) instead of `semgrep ci`.
-      # `semgrep ci` is diff-aware and needs a Semgrep platform token, so
-      # without one it scans nothing. `--error` makes the job FAIL (red X)
-      # when any finding is detected - which is what we want to showcase.
-      - name: Run Semgrep
+      # `semgrep scan` with --baseline-commit reports ONLY findings introduced
+      # by this PR (compared against the PR base). No platform token needed.
+      # --error makes the job FAIL (red X) when a new finding is detected.
+      - name: Run Semgrep (PR changes only)
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           semgrep scan \
             --config p/default \
@@ -106,6 +112,7 @@ jobs:
             --config p/react \
             --config p/secrets \
             --config p/owasp-top-ten \
+            --baseline-commit "${BASE_SHA}" \
             --sarif --output=semgrep.sarif \
             --error
 
