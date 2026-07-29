@@ -1,163 +1,199 @@
+# name: Security Scan
+
+# # Runs on every push and pull request so secrets / vulnerable patterns
+# # are caught before they ever reach the main branch.
+# on:
+#   push:
+#     branches: ["**"]
+#   pull_request:
+#     branches: ["**"]
+#   workflow_dispatch: {}
+
+# # Cancel older runs on the same branch to keep the demo output clean.
+# concurrency:
+#   group: security-${{ github.ref }}
+#   cancel-in-progress: true
+
+# permissions:
+#   contents: read
+#   security-events: write   # allows uploading SARIF to the Security tab
+#   pull-requests: read
+
+# jobs:
+#   # ------------------------------------------------------------------
+#   # 1. Gitleaks - scans git history + working tree for hard-coded secrets
+#   #    (API keys, tokens, passwords, private keys, etc.)
+#   # ------------------------------------------------------------------
+#   gitleaks:
+#     name: Gitleaks (secret scanning)
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v4
+#         with:
+#           fetch-depth: 0   # full history so gitleaks can scan every commit
+
+#       # The gitleaks-action scans only the commits in the current push
+#       # (incremental), so a secret added in an EARLIER commit is missed on
+#       # later pushes. We run the binary against the full history instead so
+#       # any secret present anywhere reliably turns the job red.
+#       - name: Install Gitleaks
+#         run: |
+#           VERSION=8.18.4
+#           curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" \
+#             | tar -xz gitleaks
+#           sudo mv gitleaks /usr/local/bin/gitleaks
+#           gitleaks version
+
+#       # continue-on-error so the summarize step always runs; it re-exits 1
+#       # when secrets are found, keeping the job red.
+#       - name: Scan whole repo (full history)
+#         id: gitleaks
+#         continue-on-error: true
+#         run: |
+#           # --redact ensures NO secret values are ever written to logs/artifacts.
+#           gitleaks detect \
+#             --source . \
+#             --report-format json \
+#             --report-path gitleaks.json \
+#             --redact \
+#             --no-banner
+
+#       - name: Summarize findings
+#         if: always()
+#         run: |
+#           if [ ! -f gitleaks.json ]; then
+#             echo "### ⚠️ Gitleaks — scanner crashed (no report produced)" >> "$GITHUB_STEP_SUMMARY"
+#             echo "Check the 'Scan whole repo' step logs for details." >> "$GITHUB_STEP_SUMMARY"
+#             exit 1
+#           fi
+#           if [ -s gitleaks.json ] && [ "$(jq 'length' gitleaks.json)" != "0" ]; then
+#             echo "## 🛑 Gitleaks detected secrets 🛑" >> "$GITHUB_STEP_SUMMARY"
+#             echo "" >> "$GITHUB_STEP_SUMMARY"
+#             echo "| File | Rule | Line |" >> "$GITHUB_STEP_SUMMARY"
+#             echo "|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
+#             jq -r '.[] | "| \(.File) | \(.RuleID) | \(.StartLine) |"' gitleaks.json >> "$GITHUB_STEP_SUMMARY"
+#             echo "" >> "$GITHUB_STEP_SUMMARY"
+#             echo "> Values are redacted. Rotate any real secret immediately and remove it from git history." >> "$GITHUB_STEP_SUMMARY"
+#             exit 1
+#           else
+#             echo "## ✅ Gitleaks — no secrets detected" >> "$GITHUB_STEP_SUMMARY"
+#           fi
+
+#   # ------------------------------------------------------------------
+#   # 2. Semgrep - static analysis for insecure code patterns
+#   #    (SQLi, XSS, command injection, weak crypto, dangerouslySetInnerHTML, etc.)
+#   # ------------------------------------------------------------------
+#   semgrep:
+#     name: Semgrep (SAST)
+#     runs-on: ubuntu-latest
+#     container:
+#       image: semgrep/semgrep
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v4
+
+#       # Use `semgrep scan` (full working-tree scan) instead of `semgrep ci`.
+#       # `semgrep ci` is diff-aware and needs a Semgrep platform token, so
+#       # without one it scans nothing. `--error` makes the job FAIL (red X)
+#       # when any finding is detected - which is what we want to showcase.
+#       - name: Run Semgrep
+#         run: |
+#           semgrep scan \
+#             --config p/default \
+#             --config p/javascript \
+#             --config p/typescript \
+#             --config p/react \
+#             --config p/secrets \
+#             --config p/owasp-top-ten \
+#             --sarif --output=semgrep.sarif \
+#             --error
+
+#       # Build a run-page summary table from the SARIF, mirroring the
+#       # table the Gitleaks action prints. Runs even when the scan step
+#       # fails (findings present) thanks to `if: always()`.
+#       - name: Semgrep summary
+#         if: always()
+#         run: |
+#           python3 - <<'PY'
+#           import json, os
+
+#           summary = os.environ["GITHUB_STEP_SUMMARY"]
+
+#           def write(text):
+#               with open(summary, "a") as f:
+#                   f.write(text)
+
+#           # If the report is missing/corrupt the scanner crashed - surface it
+#           # loudly instead of silently reporting "no issues" (a false all-clear).
+#           if not os.path.exists("semgrep.sarif"):
+#               write("## ⚠️ Semgrep - scanner crashed (no report produced)\n\n")
+#               write("Check the 'Run Semgrep' step logs for details.\n")
+#               raise SystemExit(0)
+#           try:
+#               data = json.load(open("semgrep.sarif"))
+#           except Exception as e:
+#               write(f"## ⚠️ Semgrep - could not parse report ({e})\n")
+#               raise SystemExit(0)
+
+#           rows = []
+#           for run in data.get("runs", []):
+#               for r in run.get("results", []):
+#                   rule = r.get("ruleId", "")
+#                   level = r.get("level", "warning")
+#                   msg = (r.get("message", {}).get("text", "") or "").splitlines()[0]
+#                   loc = (r.get("locations") or [{}])[0].get("physicalLocation", {})
+#                   uri = loc.get("artifactLocation", {}).get("uri", "")
+#                   line = loc.get("region", {}).get("startLine", "")
+#                   rows.append((rule, level, uri, line, msg))
+#           if rows:
+#               write("## 🛑 Semgrep detected issues 🛑\n\n")
+#               write("| Rule ID | Severity | File | Line | Message |\n")
+#               write("|---|---|---|---|---|\n")
+#               for rule, level, uri, line, msg in rows:
+#                   write(f"| `{rule}` | {level} | {uri} | {line} | {msg} |\n")
+#           else:
+#               write("## ✅ Semgrep found no issues\n")
+#           PY
+
+#       - name: Upload Semgrep results to Security tab
+#         uses: github/codeql-action/upload-sarif@v3
+#         if: always()
+#         with:
+#           sarif_file: semgrep.sarif
+
+
 name: Security Scan
 
-# Runs on every push and pull request so secrets / vulnerable patterns
-# are caught before they ever reach the main branch.
 on:
   push:
-    branches: ["**"]
+    branches: [main]
   pull_request:
-    branches: ["**"]
-  workflow_dispatch: {}
-
-# Cancel older runs on the same branch to keep the demo output clean.
-concurrency:
-  group: security-${{ github.ref }}
-  cancel-in-progress: true
-
-permissions:
-  contents: read
-  security-events: write   # allows uploading SARIF to the Security tab
-  pull-requests: read
+    branches: [main]
 
 jobs:
-  # ------------------------------------------------------------------
-  # 1. Gitleaks - scans git history + working tree for hard-coded secrets
-  #    (API keys, tokens, passwords, private keys, etc.)
-  # ------------------------------------------------------------------
   gitleaks:
-    name: Gitleaks (secret scanning)
+    name: Scan for leaked secrets
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # full history so gitleaks can scan every commit
+          fetch-depth: 0
 
-      # The gitleaks-action scans only the commits in the current push
-      # (incremental), so a secret added in an EARLIER commit is missed on
-      # later pushes. We run the binary against the full history instead so
-      # any secret present anywhere reliably turns the job red.
-      - name: Install Gitleaks
-        run: |
-          VERSION=8.18.4
-          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" \
-            | tar -xz gitleaks
-          sudo mv gitleaks /usr/local/bin/gitleaks
-          gitleaks version
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # continue-on-error so the summarize step always runs; it re-exits 1
-      # when secrets are found, keeping the job red.
-      - name: Scan whole repo (full history)
-        id: gitleaks
-        continue-on-error: true
-        run: |
-          # --redact ensures NO secret values are ever written to logs/artifacts.
-          gitleaks detect \
-            --source . \
-            --report-format json \
-            --report-path gitleaks.json \
-            --redact \
-            --no-banner
-
-      - name: Summarize findings
-        if: always()
-        run: |
-          if [ ! -f gitleaks.json ]; then
-            echo "### ⚠️ Gitleaks — scanner crashed (no report produced)" >> "$GITHUB_STEP_SUMMARY"
-            echo "Check the 'Scan whole repo' step logs for details." >> "$GITHUB_STEP_SUMMARY"
-            exit 1
-          fi
-          if [ -s gitleaks.json ] && [ "$(jq 'length' gitleaks.json)" != "0" ]; then
-            echo "## 🛑 Gitleaks detected secrets 🛑" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "| File | Rule | Line |" >> "$GITHUB_STEP_SUMMARY"
-            echo "|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
-            jq -r '.[] | "| \(.File) | \(.RuleID) | \(.StartLine) |"' gitleaks.json >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "> Values are redacted. Rotate any real secret immediately and remove it from git history." >> "$GITHUB_STEP_SUMMARY"
-            exit 1
-          else
-            echo "## ✅ Gitleaks — no secrets detected" >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-  # ------------------------------------------------------------------
-  # 2. Semgrep - static analysis for insecure code patterns
-  #    (SQLi, XSS, command injection, weak crypto, dangerouslySetInnerHTML, etc.)
-  # ------------------------------------------------------------------
   semgrep:
-    name: Semgrep (SAST)
+    name: Static analysis for vulnerabilities
     runs-on: ubuntu-latest
     container:
       image: semgrep/semgrep
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # Use `semgrep scan` (full working-tree scan) instead of `semgrep ci`.
-      # `semgrep ci` is diff-aware and needs a Semgrep platform token, so
-      # without one it scans nothing. `--error` makes the job FAIL (red X)
-      # when any finding is detected - which is what we want to showcase.
       - name: Run Semgrep
-        run: |
-          semgrep scan \
-            --config p/default \
-            --config p/javascript \
-            --config p/typescript \
-            --config p/react \
-            --config p/secrets \
-            --config p/owasp-top-ten \
-            --sarif --output=semgrep.sarif \
-            --error
-
-      # Build a run-page summary table from the SARIF, mirroring the
-      # table the Gitleaks action prints. Runs even when the scan step
-      # fails (findings present) thanks to `if: always()`.
-      - name: Semgrep summary
-        if: always()
-        run: |
-          python3 - <<'PY'
-          import json, os
-
-          summary = os.environ["GITHUB_STEP_SUMMARY"]
-
-          def write(text):
-              with open(summary, "a") as f:
-                  f.write(text)
-
-          # If the report is missing/corrupt the scanner crashed - surface it
-          # loudly instead of silently reporting "no issues" (a false all-clear).
-          if not os.path.exists("semgrep.sarif"):
-              write("## ⚠️ Semgrep - scanner crashed (no report produced)\n\n")
-              write("Check the 'Run Semgrep' step logs for details.\n")
-              raise SystemExit(0)
-          try:
-              data = json.load(open("semgrep.sarif"))
-          except Exception as e:
-              write(f"## ⚠️ Semgrep - could not parse report ({e})\n")
-              raise SystemExit(0)
-
-          rows = []
-          for run in data.get("runs", []):
-              for r in run.get("results", []):
-                  rule = r.get("ruleId", "")
-                  level = r.get("level", "warning")
-                  msg = (r.get("message", {}).get("text", "") or "").splitlines()[0]
-                  loc = (r.get("locations") or [{}])[0].get("physicalLocation", {})
-                  uri = loc.get("artifactLocation", {}).get("uri", "")
-                  line = loc.get("region", {}).get("startLine", "")
-                  rows.append((rule, level, uri, line, msg))
-          if rows:
-              write("## 🛑 Semgrep detected issues 🛑\n\n")
-              write("| Rule ID | Severity | File | Line | Message |\n")
-              write("|---|---|---|---|---|\n")
-              for rule, level, uri, line, msg in rows:
-                  write(f"| `{rule}` | {level} | {uri} | {line} | {msg} |\n")
-          else:
-              write("## ✅ Semgrep found no issues\n")
-          PY
-
-      - name: Upload Semgrep results to Security tab
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: semgrep.sarif
+        run: semgrep ci
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
