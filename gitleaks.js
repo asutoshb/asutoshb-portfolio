@@ -1,0 +1,1 @@
+const stripeKey1 = "sk_live_51H8xExampleFakeKeyForDemoOnly1234567890";
